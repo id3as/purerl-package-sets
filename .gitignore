@@ -1,3 +1,5 @@
 .psc-package
 output
 psc-package.json
+packages.dhall
+.spago/

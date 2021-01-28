@@ -1,20 +1,23 @@
-all: format generate validate
+.PHONY: all format generate validate dhall ci
+
+all: format generate validate dhall
+
+ci: generate
+	echo "Checking if packages.json has changed..."
+	git diff --exit-code packages.json
+	# TODO spago verify & backend
+	# cd src && spago verify-set
 
 format:
-	@ls src/**/*.dhall | xargs -I{} dhall format --inplace {}
+	@nix-shell --run 'find src/ -iname "*.dhall" -exec dhall format --inplace {} \;'
 	@echo formatted dhall files
 
+generate: SHELL:=/usr/bin/env bash
 generate:
 	@dhall-to-json --pretty <<< "./src/packages.dhall" | jq '.' -S  > packages.json
 	@echo generated to packages.json
 
-validate:
-	@./scripts/validate.pl
+dhall: packages.dhall
 
-setup: all setup-only
-
-setup-only:
-	@echo '{ "name": "test-package", "set": "testing", "source": "", "depends": [] }' > psc-package.json
-	@mkdir -p .psc-package/testing/.set
-	@cp packages.json .psc-package/testing/.set/packages.json
-	@echo setup testing package set
+packages.dhall: packages.json
+	nix-shell --run '>packages.dhall dhall <<< ./src/packages.dhall'
